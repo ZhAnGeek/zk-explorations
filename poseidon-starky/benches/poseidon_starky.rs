@@ -46,7 +46,7 @@ fn bench_poseidon_starky(c: &mut Criterion) {
 
 criterion_group! {
     name = benches;
-    config = Criterion::default().measurement_time(std::time::Duration::from_secs(300)).sample_size(10);
+    config = Criterion::default().measurement_time(std::time::Duration::from_secs(20)).sample_size(10);
     targets = bench_poseidon_starky
 }
 criterion_main!(benches);

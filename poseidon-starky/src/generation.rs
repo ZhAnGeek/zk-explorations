@@ -10,7 +10,7 @@ use std::convert::TryInto;
 use std::ops::AddAssign;
 use zkhash_poseidon::fields::goldilocks::FpGoldiLocks;
 use zkhash_poseidon::poseidon::poseidon::Poseidon;
-use zkhash_poseidon::poseidon::poseidon_instance_goldilocks::POSEIDON_GOLDILOCKS_8_PARAMS;
+use zkhash_poseidon::poseidon::poseidon_instance_goldilocks::POSEIDON_GOLDILOCKS_16_PARAMS;
 
 pub(crate) fn scalar_to_field<RF: RichField, PF: PrimeField>(scalar: &PF) -> RF {
     RF::from_noncanonical_biguint(BigUint::from_bytes_le(&scalar.into_bigint().to_bytes_le()))
@@ -51,7 +51,7 @@ fn generate_1st_full_round_state<Field: RichField>(
     preimage: &[Field; STATE_SIZE],
 ) -> Vec<[Field; STATE_SIZE]> {
     let mut outputs = Vec::new();
-    let instance = Poseidon::new(&POSEIDON_GOLDILOCKS_8_PARAMS);
+    let instance = Poseidon::new(&POSEIDON_GOLDILOCKS_16_PARAMS);
     assert_eq!(instance.get_t(), STATE_SIZE);
 
     let mut current_state = field_to_scalar_vec(preimage);
@@ -70,7 +70,7 @@ fn generate_partial_round_state<Field: RichField>(
     last_rount_output: &[Field; STATE_SIZE],
 ) -> Vec<[Field; STATE_SIZE]> {
     let mut outputs = Vec::new();
-    let instance = Poseidon::new(&POSEIDON_GOLDILOCKS_8_PARAMS);
+    let instance = Poseidon::new(&POSEIDON_GOLDILOCKS_16_PARAMS);
     assert_eq!(instance.get_t(), STATE_SIZE);
 
     let mut current_state: Vec<FpGoldiLocks> = field_to_scalar_vec(last_rount_output);
@@ -91,7 +91,7 @@ fn generate_2st_full_round_state<Field: RichField>(
     last_rount_output: &[Field; STATE_SIZE],
 ) -> Vec<[Field; STATE_SIZE]> {
     let mut outputs = Vec::new();
-    let instance = Poseidon::new(&POSEIDON_GOLDILOCKS_8_PARAMS);
+    let instance = Poseidon::new(&POSEIDON_GOLDILOCKS_16_PARAMS);
     assert_eq!(instance.get_t(), STATE_SIZE);
 
     let mut current_state = field_to_scalar_vec(last_rount_output);
@@ -110,7 +110,7 @@ fn generate_2st_full_round_state<Field: RichField>(
 /// Generate the outputs for a given preimage
 fn generate_outputs<Field: RichField>(preimage: &[Field; STATE_SIZE]) -> [Field; STATE_SIZE] {
     let mut outputs = [Field::ZERO; STATE_SIZE];
-    let instance = Poseidon::new(&POSEIDON_GOLDILOCKS_8_PARAMS);
+    let instance = Poseidon::new(&POSEIDON_GOLDILOCKS_16_PARAMS);
     assert_eq!(instance.get_t(), STATE_SIZE);
 
     let input = field_to_scalar_vec(preimage);

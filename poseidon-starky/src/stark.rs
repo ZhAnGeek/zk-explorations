@@ -18,7 +18,7 @@ use starky::stark::Stark;
 use starky::vars::{StarkEvaluationTargets, StarkEvaluationVars};
 use std::marker::PhantomData;
 use zkhash_poseidon::fields::goldilocks::{FpGoldiLocks, FqConfig};
-use zkhash_poseidon::poseidon::poseidon_instance_goldilocks::{MDS8, RC8};
+use zkhash_poseidon::poseidon::poseidon_instance_goldilocks::{MDS16, RC16};
 
 fn scalar_to_fe<F: RichField + Extendable<D>, const D: usize, FE, const D2: usize, PF: PrimeField>(
     scalar: PF,
@@ -70,10 +70,10 @@ where
 {
     assert_eq!(STATE_SIZE, 8);
     let mut out = [P::ZEROS; 8];
-    if MDS8[0][0].0.is_zero() {
+    if MDS16[0][0].0.is_zero() {
         // panic!();
     }
-    out[0] = state[0] * scalar_to_fe::<F, D, FE, D2, FpGoldiLocks>(MDS8[0][0]);
+    out[0] = state[0] * scalar_to_fe::<F, D, FE, D2, FpGoldiLocks>(MDS16[0][0]);
 
     for i in 1..8 {
 
@@ -108,7 +108,7 @@ fn cheap_matmul_constraints_recursive<
     let zero = builder.zero_extension();
     let mut out = [zero; 8];
 
-    let mds_extension = builder.constant_extension(scalar_to_extension_target::<F, D, FpGoldiLocks>(MDS8[0][0]));
+    let mds_extension = builder.constant_extension(scalar_to_extension_target::<F, D, FpGoldiLocks>(MDS16[0][0]));
     out[0] = builder.mul_extension(state[0], mds_extension);
 
     for i in 1..8 {
@@ -131,17 +131,17 @@ fn matmul_constraints<
     P,
     const D2: usize,
 >(
-    state: &[P; 8],
+    state: &[P; 16],
     opt_mat: Option<Vec<Vec<Fp<MontBackend<FqConfig, 1>, 1>>>>,
-) -> [P; 8]
+) -> [P; 16]
 where
     FE: FieldExtension<D2, BaseField = F>,
     P: PackedField<Scalar = FE>,
 {
-    assert_eq!(STATE_SIZE, 8);
-    let mut out = [P::ZEROS; 8];
+    assert_eq!(STATE_SIZE, 16);
+    let mut out = [P::ZEROS; 16];
 
-    let mat = opt_mat.unwrap_or_else(|| MDS8.to_vec());
+    let mat = opt_mat.unwrap_or_else(|| MDS16.to_vec());
 
     for i in 0..STATE_SIZE {
         for (col, inp) in state.iter().enumerate().take(STATE_SIZE) {
@@ -167,7 +167,7 @@ fn matmul_constraints_recursive<
 {
     assert_eq!(STATE_SIZE, 8);
 
-    let mat = opt_mat.unwrap_or_else(|| MDS8.to_vec());
+    let mat = opt_mat.unwrap_or_else(|| MDS16.to_vec());
 
     let zero = builder.zero_extension();
     let mut out = [zero; 8];
@@ -186,24 +186,24 @@ fn matmul_constraints_recursive<
 
 // degree: 1
 fn add_rc_constraints<F: RichField + Extendable<D>, const D: usize, FE, P, const D2: usize>(
-    state: &[P; 8],
+    state: &[P; 16],
     r: usize,
     opt: bool,
-) -> [P; 8]
+) -> [P; 16]
 where
     FE: FieldExtension<D2, BaseField = F>,
     P: PackedField<Scalar = FE>,
 {
-    assert_eq!(STATE_SIZE, 8);
-    let mut out = [P::ZEROS; 8];
+    assert_eq!(STATE_SIZE, 16);
+    let mut out = [P::ZEROS; 16];
 
     let rc: Vec<Vec<FpGoldiLocks>> = if opt {
-        PoseidonParams::equivalent_round_constants(&RC8, &MDS8, ROUNDS_F / 2, ROUNDS_P)
+        PoseidonParams::equivalent_round_constants(&RC16, &MDS16, ROUNDS_F / 2, ROUNDS_P)
     } else {
-        RC8.to_vec()
+        RC16.to_vec()
     };
 
-    for i in 0..8 {
+    for i in 0..16 {
         if rc[r][i].0.is_zero() {
             // panic!();
         }
@@ -226,14 +226,14 @@ fn add_rc_constraints_recursive<F: RichField + Extendable<D>, const D: usize>(
     let mut out = [zero; 8];
 
     let rc: Vec<Vec<FpGoldiLocks>> = if opt {
-        PoseidonParams::equivalent_round_constants(&RC8, &MDS8, ROUNDS_F / 2, ROUNDS_P)
+        PoseidonParams::equivalent_round_constants(&RC16, &MDS16, ROUNDS_F / 2, ROUNDS_P)
     } else {
-        RC8.to_vec()
+        RC16.to_vec()
     };
     
     for i in 0..8 {
-        let rc8_extension = builder.constant_extension(scalar_to_extension_target::<F, D, FpGoldiLocks>(rc[r][i]));
-        out[i] = builder.add_extension(state[i], rc8_extension);
+        let RC16_extension = builder.constant_extension(scalar_to_extension_target::<F, D, FpGoldiLocks>(rc[r][i]));
+        out[i] = builder.add_extension(state[i], RC16_extension);
     }
 
     out
@@ -247,7 +247,7 @@ where
     FE: FieldExtension<D2, BaseField = F>,
     P: PackedField<Scalar = FE>,
 {
-    assert_eq!(STATE_SIZE, 8);
+    assert_eq!(STATE_SIZE, 16);
     let mut out = P::ONES;
 
     for _ in 0..SBOX_DEGREE {
@@ -294,7 +294,7 @@ impl<F: RichField + Extendable<D>, const D: usize> Stark<F, D> for PoseidonStark
         let lv = vars.local_values;
         let mut state = lv[0..STATE_SIZE].try_into().unwrap();
 
-        let (m_i, v, w_hat) = PoseidonParams::equivalent_matrices(&MDS8, STATE_SIZE, ROUNDS_P);
+        let (m_i, v, w_hat) = PoseidonParams::equivalent_matrices(&MDS16, STATE_SIZE, ROUNDS_P);
 
         // first full rounds
         for r in 0..ROUNDS_F {
@@ -359,7 +359,7 @@ impl<F: RichField + Extendable<D>, const D: usize> Stark<F, D> for PoseidonStark
         let lv = vars.local_values;
         let mut state = lv[0..STATE_SIZE].try_into().unwrap();
 
-        let (m_i, v, w_hat) = PoseidonParams::equivalent_matrices(&MDS8, STATE_SIZE, ROUNDS_P);
+        let (m_i, v, w_hat) = PoseidonParams::equivalent_matrices(&MDS16, STATE_SIZE, ROUNDS_P);
 
         // first full rounds
         for r in 0..ROUNDS_F {
@@ -376,7 +376,7 @@ impl<F: RichField + Extendable<D>, const D: usize> Stark<F, D> for PoseidonStark
             }
         }
 
-        let opt_round_constants = PoseidonParams::equivalent_round_constants(&RC8, &MDS8, ROUNDS_F / 2, ROUNDS_P);
+        let opt_round_constants = PoseidonParams::equivalent_round_constants(&RC16, &MDS16, ROUNDS_F / 2, ROUNDS_P);
 
         let p_end = ROUNDS_F + ROUNDS_P;
 
