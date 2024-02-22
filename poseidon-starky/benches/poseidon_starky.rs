@@ -18,7 +18,7 @@ fn bench_poseidon_starky(c: &mut Criterion) {
     config.fri_config.cap_height = 0;
     config.fri_config.rate_bits = 3; // to meet the constraint degree bound
 
-    let num_rows = 1 << 15;
+    let num_rows: usize = (std::env::var("ROWS").unwrap_or_else(|_| String::from("64"))).parse().unwrap();
     let mut step_rows = Vec::with_capacity(num_rows);
     for _ in 0..num_rows {
         let preimage = (0..STATE_SIZE).map(|_| F::rand()).collect::<Vec<_>>();
@@ -46,7 +46,7 @@ fn bench_poseidon_starky(c: &mut Criterion) {
 
 criterion_group! {
     name = benches;
-    config = Criterion::default().measurement_time(std::time::Duration::from_secs(20)).sample_size(10);
+    config = Criterion::default().measurement_time(std::time::Duration::from_secs(300)).sample_size(10);
     targets = bench_poseidon_starky
 }
 criterion_main!(benches);
